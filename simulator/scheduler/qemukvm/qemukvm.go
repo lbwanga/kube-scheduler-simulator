@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/klog/v2"
 	"k8s.io/kubernetes/pkg/scheduler/framework"
+	frameworkruntime "k8s.io/kubernetes/pkg/scheduler/framework/runtime"
 	"math"
 )
 
@@ -24,24 +24,7 @@ const (
 type QemuKvmScheduler struct {
 	handle framework.Handle
 
-	// QemuKvmScore 是 QEMU/KVM 节点的额外分数
-	qemuKvmScore int64
-
-	// NonQemuKvmScore 是非 QEMU/KVM 节点的减分
-	nonQemuKvmScore int64
-
-	// ResourceScoreWeight 是资源评分的权重
-	weight float64
-}
-
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-type QemuKvmArgs struct {
-	metav1.TypeMeta `json:",inline"`
-
-	QemuKvmScore    int64   `json:"qemuKvmScore"`
-	NonQemuKvmScore int64   `json:"nonQemuKvmScore"`
-	Weight          float64 `json:"weight"`
+	args *QemuKvmArgs
 }
 
 // Name 返回插件名称
@@ -80,7 +63,7 @@ func (s *QemuKvmScheduler) Score(ctx context.Context, state *framework.CycleStat
 	klog.V(3).InfoS("Annotation score calculated", "node", nodeName, "score", annotationScore)
 
 	// 合并分数
-	mergeScore := int64(float64(resourceScore)*s.weight) + annotationScore
+	mergeScore := int64(float64(resourceScore)*s.args.Weight) + annotationScore
 
 	finalScore := normalizeScore(int64(mergeScore), framework.MaxNodeScore, framework.MinNodeScore)
 	klog.V(3).InfoS("Final score calculated", "node", nodeName, "score", finalScore)
@@ -158,11 +141,11 @@ func calculateMemoryScore(allocatableMemory, usedMemory int64, pod *v1.Pod) int6
 func (q *QemuKvmScheduler) calculateAnnotationScore(node *v1.Node) int64 {
 	if value, exists := node.Annotations[QemuKvmAnnotation]; exists {
 		if value == QemuKvmAnnotationValue {
-			return q.qemuKvmScore
+			return q.args.QemuKvmScore
 		}
-		return q.nonQemuKvmScore
+		return q.args.NonQemuKvmScore
 	}
-	return q.nonQemuKvmScore
+	return q.args.NonQemuKvmScore
 }
 
 // ScoreExtensions 返回 ScoreExtensions 接口
@@ -212,27 +195,15 @@ func normalizeScore(value, max, min int64) int64 {
 	return value
 }
 
-func (a *QemuKvmArgs) DeepCopyObject() runtime.Object {
-	if a == nil {
-		return nil
-	}
-	out := new(QemuKvmArgs)
-	*out = *a
-	return out
-}
-
 // New 创建插件实例
 func New(_ context.Context, obj runtime.Object, h framework.Handle) (framework.Plugin, error) {
 	klog.V(3).InfoS("Creating new QemuKvmScheduler plugin")
-
-	args, ok := obj.(*QemuKvmArgs)
-	if !ok {
+	args := &QemuKvmArgs{}
+	if err := frameworkruntime.DecodeInto(obj, args); err != nil {
 		return nil, fmt.Errorf("invalid arguments, expected QemuKvmArgs")
 	}
 	return &QemuKvmScheduler{
-		handle:          h,
-		qemuKvmScore:    args.QemuKvmScore,
-		nonQemuKvmScore: args.NonQemuKvmScore,
-		weight:          args.Weight,
+		handle: h,
+		args:   args,
 	}, nil
 }

@@ -79,7 +79,7 @@ profiles:
                 weight: 1
       - name: QemuKvmAnnotation
         args:
-          kind: QemuKvmAnnotationArgs
+          kind: QemuKvmArgs
           apiVersion: kubescheduler.config.k8s.io/v1
           qemuKvmScore: 50
           nonQemuKvmScore: -30
