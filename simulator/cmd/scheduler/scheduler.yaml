@@ -1,2 +1,86 @@
 kind: KubeSchedulerConfiguration
 apiVersion: kubescheduler.config.k8s.io/v1
+clientConnection:
+  kubeconfig: kubeconfig.yaml
+profiles:
+  - schedulerName: default-scheduler
+    plugins:
+      filter:
+        enabled:
+          - name: NodeName
+          - name: NodeUnschedulable
+          - name: NodeResourcesFit
+      score:
+        enabled:
+          - name: ImageLocality
+            weight: 1
+          - name: NodeResourcesBalancedAllocation
+            weight: 1
+          - name: NodeResourcesFit
+            weight: 1
+    pluginConfig:
+      - name: NodeResourcesBalancedAllocation
+        args:
+          kind: NodeResourcesBalancedAllocationArgs
+          apiVersion: kubescheduler.config.k8s.io/v1
+          resources:
+            - name: cpu
+              weight: 1
+            - name: memory
+              weight: 1
+      - name: NodeResourcesFit
+        args:
+          kind: NodeResourcesFitArgs
+          apiVersion: kubescheduler.config.k8s.io/v1
+          scoringStrategy:
+            type: LeastAllocated
+            resources:
+              - name: cpu
+                weight: 1
+              - name: memory
+                weight: 1
+  - schedulerName: qemukvm-scheduler
+    plugins:
+      filter:
+        enabled:
+          - name: NodeName
+          - name: NodeUnschedulable
+          - name: NodeResourcesFit
+      score:
+        enabled:
+          - name: ImageLocality
+            weight: 1
+          - name: NodeResourcesBalancedAllocation
+            weight: 1
+          - name: NodeResourcesFit
+            weight: 1
+          - name: QemuKvmAnnotation
+            weight: 1
+    pluginConfig:
+      - name: NodeResourcesBalancedAllocation
+        args:
+          kind: NodeResourcesBalancedAllocationArgs
+          apiVersion: kubescheduler.config.k8s.io/v1
+          resources:
+            - name: cpu
+              weight: 1
+            - name: memory
+              weight: 1
+      - name: NodeResourcesFit
+        args:
+          kind: NodeResourcesFitArgs
+          apiVersion: kubescheduler.config.k8s.io/v1
+          scoringStrategy:
+            type: LeastAllocated
+            resources:
+              - name: cpu
+                weight: 1
+              - name: memory
+                weight: 1
+      - name: QemuKvmAnnotation
+        args:
+          kind: QemuKvmAnnotationArgs
+          apiVersion: kubescheduler.config.k8s.io/v1
+          qemuKvmScore: 50
+          nonQemuKvmScore: -30
+          weight: 1
