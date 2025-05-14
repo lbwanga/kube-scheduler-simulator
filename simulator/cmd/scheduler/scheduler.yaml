@@ -7,18 +7,34 @@ profiles:
     plugins:
       filter:
         enabled:
-          - name: NodeName
           - name: NodeUnschedulable
+          - name: NodeName
+          - name: NodePorts
+          - name: NodeAffinity
           - name: NodeResourcesFit
+          - name: PodTopologySpread
+          - name: InterPodAffinity
       score:
         enabled:
+          - name: NodeResourcesBalancedAllocation
+            weight: 1
           - name: ImageLocality
             weight: 1
-          - name: NodeResourcesBalancedAllocation
+          - name: InterPodAffinity
             weight: 1
           - name: NodeResourcesFit
             weight: 1
+          - name: NodeAffinity
+            weight: 1
+          - name: PodTopologySpread
+            weight: 2
+        disabled:
+          - name: TaintToleration
     pluginConfig:
+      - name: NodeAffinity
+        args:
+          kind: NodeAffinityArgs
+          apiVersion: kubescheduler.config.k8s.io/v1
       - name: NodeResourcesBalancedAllocation
         args:
           kind: NodeResourcesBalancedAllocationArgs
@@ -39,24 +55,45 @@ profiles:
                 weight: 1
               - name: memory
                 weight: 1
+      - name: PodTopologySpread
+        args:
+          kind: PodTopologySpreadArgs
+          apiVersion: kubescheduler.config.k8s.io/v1
+          defaultingType: System
   - schedulerName: qemukvm-scheduler
     plugins:
       filter:
         enabled:
-          - name: NodeName
           - name: NodeUnschedulable
+          - name: NodeName
+          - name: NodePorts
+          - name: NodeAffinity
           - name: NodeResourcesFit
+          - name: PodTopologySpread
+          - name: InterPodAffinity
       score:
         enabled:
+          - name: NodeResourcesBalancedAllocation
+            weight: 1
           - name: ImageLocality
             weight: 1
-          - name: NodeResourcesBalancedAllocation
+          - name: InterPodAffinity
             weight: 1
           - name: NodeResourcesFit
             weight: 1
+          - name: NodeAffinity
+            weight: 1
+          - name: PodTopologySpread
+            weight: 2
           - name: QemuKvmAnnotation
             weight: 1
+        disabled:
+          - name: TaintToleration
     pluginConfig:
+      - name: NodeAffinity
+        args:
+          kind: NodeAffinityArgs
+          apiVersion: kubescheduler.config.k8s.io/v1
       - name: NodeResourcesBalancedAllocation
         args:
           kind: NodeResourcesBalancedAllocationArgs
@@ -77,10 +114,15 @@ profiles:
                 weight: 1
               - name: memory
                 weight: 1
+      - name: PodTopologySpread
+        args:
+          kind: PodTopologySpreadArgs
+          apiVersion: kubescheduler.config.k8s.io/v1
+          defaultingType: System
       - name: QemuKvmAnnotation
         args:
           kind: QemuKvmArgs
           apiVersion: kubescheduler.config.k8s.io/v1
-          qemuKvmScore: 50
-          nonQemuKvmScore: -30
+          qemuKvmScore: 100
+          nonQemuKvmScore: 0
           weight: 1

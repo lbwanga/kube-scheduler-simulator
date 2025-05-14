@@ -63,7 +63,7 @@ func (s *QemuKvmScheduler) Score(ctx context.Context, state *framework.CycleStat
 	klog.V(3).InfoS("Annotation score calculated", "node", nodeName, "score", annotationScore)
 
 	// 合并分数
-	mergeScore := int64(float64(resourceScore)*s.args.Weight) + annotationScore
+	mergeScore := int64(float64(annotationScore)*s.args.Weight) + resourceScore
 
 	finalScore := normalizeScore(int64(mergeScore), framework.MaxNodeScore, framework.MinNodeScore)
 	klog.V(3).InfoS("Final score calculated", "node", nodeName, "score", finalScore)
@@ -150,35 +150,6 @@ func (q *QemuKvmScheduler) calculateAnnotationScore(node *v1.Node) int64 {
 
 // ScoreExtensions 返回 ScoreExtensions 接口
 func (q *QemuKvmScheduler) ScoreExtensions() framework.ScoreExtensions {
-	return q
-}
-
-// NormalizeScore 实现分数标准化
-func (s *QemuKvmScheduler) NormalizeScore(ctx context.Context, state *framework.CycleState, pod *v1.Pod, scores framework.NodeScoreList) *framework.Status {
-	klog.V(3).InfoS("Running NormalizeScore for pod", "pod", klog.KObj(pod))
-	// Find highest and lowest scores.
-	var highest int64 = -math.MaxInt64
-	var lowest int64 = math.MaxInt64
-	for _, nodeScore := range scores {
-		if nodeScore.Score > highest {
-			highest = nodeScore.Score
-		}
-		if nodeScore.Score < lowest {
-			lowest = nodeScore.Score
-		}
-	}
-
-	// Transform the highest to lowest score range to fit the framework's min to max node score range.
-	oldRange := highest - lowest
-	newRange := framework.MaxNodeScore - framework.MinNodeScore
-	for i, nodeScore := range scores {
-		if oldRange == 0 {
-			scores[i].Score = framework.MinNodeScore
-		} else {
-			scores[i].Score = ((nodeScore.Score - lowest) * newRange / oldRange) + framework.MinNodeScore
-		}
-	}
-
 	return nil
 }
 
